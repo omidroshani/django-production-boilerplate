@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  app:
+    command: sh -c "cd /app && gunicorn --bind :${DJANGO_PORT} --workers 4 django-app.wsgi:application"
+    build:
+      context: .
+    container_name: django__app__${DJANGO_ENVIRONMENT}
+    ports:
+      - ${DJANGO_PORT}:${DJANGO_PORT}
+    networks:
+      - main
+    restart: on-failure
+    env_file:
+      - ./.env
+    image: app-image-${DJANGO_ENVIRONMENT}
+
+  celery_worker:
+    command: sh -c "celery -A django-app worker -B -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    container_name: django__celery__${DJANGO_ENVIRONMENT}
+    depends_on:
+      - app
+    hostname: celery_worker
+    image: app-image-${DJANGO_ENVIRONMENT}
+    networks:
+      - main
+    restart: on-failure
+    env_file:
+      - ./.env
+      
+networks:
+  main:
